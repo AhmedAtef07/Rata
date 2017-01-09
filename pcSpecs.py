@@ -7,8 +7,12 @@ import psutil
 import time
 import win32com.client
 import wmi
+from uuid import getnode
 
 def getSpecs():
+
+    mac = hex(getnode())
+    #ipConfig = os.system("ipconfig")
     hostname = socket.gethostname()
     ipAddress = socket.gethostbyname(socket.gethostname())
     domainName = socket.getfqdn()
@@ -57,8 +61,11 @@ def getSpecs():
         softwareElementState = objItem.SoftwareElementState
         status = objItem.Status
 
-    specsFile = open("pcSpecs.txt", "w")
+    os.system("ipconfig > pcSpecs.txt")
+
+    specsFile = open("pcSpecs.txt", "a")
     specsFile.write(
+        "\n\nMac Address:" + str(mac) + "\n" +
         "Hostname: " + hostname + "\n" +
         "IP Address: " + ipAddress + "\n" +
         "Full Qualified Domain Name: " + domainName + "\n" +
@@ -106,6 +113,7 @@ def getSpecs():
         "\nActive Processes:\n"
         )
 
+    #specsFile.write (os.system("ipconfig"))
     for process in processes:
           specsFile.write("\t" + str(process.ProcessId) + " - " + str(process.Name) + "\n")
 
@@ -125,9 +133,10 @@ def getSpecs():
                specsFile.write("\t" + dirc + "\n")
         except:
                specsFile.write(path + " can't access\n")
-
     specsFile.close()
+
     return
+
 
 def main():
     getSpecs()
