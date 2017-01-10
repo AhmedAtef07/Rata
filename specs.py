@@ -1,18 +1,15 @@
-import socket
 import os
-import sys
-import socket
 import platform
-import psutil
+import socket
+import sys
 import time
+
+import psutil
 import win32com.client
 import wmi
-from uuid import getnode
 
-def getSpecs():
 
-    mac = hex(getnode())
-    #ipConfig = os.system("ipconfig")
+def get_specs():
     hostname = socket.gethostname()
     ipAddress = socket.gethostbyname(socket.gethostname())
     domainName = socket.getfqdn()
@@ -26,16 +23,16 @@ def getSpecs():
     CPUsNum = psutil.cpu_count()
     pysicalCPUs = psutil.cpu_count(logical=False)
     sysBootTime = psutil.boot_time()
-    timeZone =  time.tzname[0]
+    timeZone = time.tzname[0]
     memory = psutil.virtual_memory()
     users = psutil.users()
     windowsDir = os.environ['windir']
     partitions = psutil.disk_partitions()
     # activeProcesses = psutil.pids()
-    processes = wmi.WMI().Win32_Process ()
+    processes = wmi.WMI().Win32_Process()
 
     objWMIService = win32com.client.Dispatch("WbemScripting.SWbemLocator")
-    objSWbemServices = objWMIService.ConnectServer(".","root\cimv2")
+    objSWbemServices = objWMIService.ConnectServer(".", "root\cimv2")
     colItems = objSWbemServices.ExecQuery("Select * from Win32_BIOS")
     for objItem in colItems:
         BIOSVersion = objItem.BIOSVersion
@@ -61,11 +58,8 @@ def getSpecs():
         softwareElementState = objItem.SoftwareElementState
         status = objItem.Status
 
-    os.system("ipconfig > pcSpecs.txt")
-
-    specsFile = open("pcSpecs.txt", "a")
-    specsFile.write(
-        "\n\nMac Address:" + str(mac) + "\n" +
+    specs = ""
+    specs += (
         "Hostname: " + hostname + "\n" +
         "IP Address: " + ipAddress + "\n" +
         "Full Qualified Domain Name: " + domainName + "\n" +
@@ -73,17 +67,17 @@ def getSpecs():
         "Machine: " + machine + "\n" +
         "Node: " + node + "\n" +
         "Pocessor: " + processor + "\n" +
-        "System OS: "+ systemOS + "\n" +
+        "System OS: " + systemOS + "\n" +
         "Release: " + release + "\n" +
         "Version: " + version + "\n" +
         "Number of CPUs: " + str(CPUsNum) + "\n" +
         "Number of Physical CPUs: " + str(pysicalCPUs) + "\n" +
         "System Boot Time: " + str(sysBootTime) + "\n" +
-        "Time Zone: "  + timeZone + "\n" +
+        "Time Zone: " + timeZone + "\n" +
         "Total Virtual Memory: " + str(memory[0]) + "\n" +
         "Available Memory: " + str(memory[1]) + "\n" +
         "Used Memory: " + str(memory[3]) + "\n" +
-        "Free Memory: " + str(memory[4])+ "\n" +
+        "Free Memory: " + str(memory[4]) + "\n" +
         "Usage Percentage: " + str(memory[2]) + "\n" +
         "BIOS Version: " + str(BIOSVersion) + "\n" +
         "Build Number: " + str(buildNumber) + "\n" +
@@ -111,35 +105,35 @@ def getSpecs():
         "Windows Directory: " + windowsDir + "\n" +
         "Disk Partitions: " + str(partitions) + "\n" +
         "\nActive Processes:\n"
-        )
+    )
 
-    #specsFile.write (os.system("ipconfig"))
-    for process in processes:
-          specsFile.write("\t" + str(process.ProcessId) + " - " + str(process.Name) + "\n")
+    # for process in processes:
+    #     specs += ("\t" + str(process.ProcessId) + " - " + str(process.Name) + "\n")
 
-    for user in users:
-        path = "C:/Users/" + user[0]
-        dirs = os.listdir( path )
-        specsFile.write("\n" + user[0] + " Directories:\n")
-        for dirc in dirs:
-           specsFile.write("\t" + dirc + "\n")
+    # for user in users:
+    #     path = "C:/Users/" + user[0]
+    #     dirs = os.listdir(path)
+    #     specs += ("\n" + user[0] + " Directories:\n")
+    #     for dirc in dirs:
+    #         specs += ("\t" + dirc + "\n")
+    #
+    # for partition in partitions:
+    #     path = partition[0]
+    #     try:
+    #         dirs = os.listdir(path)
+    #         specs += ("\n" + partition[0] + " Directories:\n")
+    #         for dirc in dirs:
+    #             specs += ("\t" + dirc + "\n")
+    #     except:
+    #         specs += (path + " can't access\n")
 
-    for partition in partitions:
-        path = partition[0]
-        try:
-            dirs = os.listdir( path )
-            specsFile.write("\n" + partition[0] + " Directories:\n")
-            for dirc in dirs:
-               specsFile.write("\t" + dirc + "\n")
-        except:
-               specsFile.write(path + " can't access\n")
-    specsFile.close()
-
-    return
+    return serialNumber, specs
 
 
 def main():
-    getSpecs()
+    x = get_specs()
+    print len(x), x
+
 
 if __name__ == "__main__":
     main()

